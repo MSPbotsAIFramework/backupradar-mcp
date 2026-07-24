@@ -20,7 +20,7 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         statuses: list[str] | None = None,
         companies: list[str] | None = None,
         tags: list[str] | None = None,
-        extra_params: dict | None = None,
+        extra_params: dict[str, object] | None = None,
     ) -> str:
         """Retrieve a paginated list of backups, optionally filtered by date.
 
@@ -70,7 +70,7 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         search_by_company_name: str | None = None,
         search_by_device_name: str | None = None,
         search_by_job_name: str | None = None,
-        extra_params: dict | None = None,
+        extra_params: dict[str, object] | None = None,
     ) -> str:
         """Retrieve backups filtered to only scheduled backup jobs, with recent history.
 
@@ -112,7 +112,7 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         search_by_company_name: str | None = None,
         search_by_device_name: str | None = None,
         search_by_job_name: str | None = None,
-        extra_params: dict | None = None,
+        extra_params: dict[str, object] | None = None,
     ) -> str:
         """Retrieve a paginated list of inactive backups.
 
