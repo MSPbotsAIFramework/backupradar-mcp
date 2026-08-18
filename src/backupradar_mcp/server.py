@@ -96,6 +96,24 @@ def create_mcp_server(settings: Settings) -> FastMCP:
     # correctly behind a reverse proxy or docker network.
     mcp = FastMCP(
         name="backupradar-mcp",
+        instructions=(
+            "Backup Radar is a backup monitoring and reporting platform MSPs use to "
+            "track the health of clients' backup jobs across many backup products "
+            "(Veeam, Datto, Acronis, etc.) in one place. It ingests daily backup job "
+            "results and classifies each job per device as success, warning, failure, "
+            "or missing, and flags jobs that have gone inactive (stopped reporting "
+            "entirely). Use this server to answer: which backups failed or need "
+            "attention today (backupradar_get_backups, filter by date/status/company/"
+            "device), what is scheduled to run and its recent history "
+            "(backupradar_get_scheduled_backups), which jobs have gone silent "
+            "(backupradar_get_inactive_backups), and the detailed pass/fail history "
+            "for one specific backup job (backupradar_get_backup_results, requires "
+            "backup_id). All 4 tools are read-only queries against the Backup Radar "
+            "v2 API; there are no write or delete tools. Typical flow: call "
+            "backupradar_get_backups or backupradar_get_inactive_backups to find "
+            "backups of concern, then backupradar_get_backup_results(backup_id=...) "
+            "to drill into one job's history."
+        ),
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 

@@ -42,7 +42,7 @@ python -m backupradar_mcp
 
 ```bash
 curl http://localhost:8080/health
-# {"status": "ok", "service": "backupradar-mcp", "transport": "http"}
+# {"status": "ok"}
 ```
 
 No credentials are required for the health endpoint.

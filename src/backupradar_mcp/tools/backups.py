@@ -1,50 +1,61 @@
-import json
 from collections.abc import Callable
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
+from pydantic import Field
 
+from .._json import dump_json_capped
 from ..api_client import BackupRadarClient, BackupRadarError
 from ._common import NO_TOKEN
+
+_MAX_SIZE = 200
 
 
 def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None]) -> None:
 
-    @mcp.tool()
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
     async def backupradar_get_backups(
-        page: int | None = None,
-        size: int | None = None,
-        date: str | None = None,
-        search_by_company_name: str | None = None,
-        search_by_device_name: str | None = None,
-        search_by_job_name: str | None = None,
-        statuses: list[str] | None = None,
-        companies: list[str] | None = None,
-        tags: list[str] | None = None,
-        extra_params: dict[str, object] | None = None,
+        page: Annotated[int | None, Field(description="Page number to fetch (default 1).")] = None,
+        size: Annotated[
+            int | None, Field(description="Page size (default 50, hard-capped at 200).")
+        ] = None,
+        date: Annotated[
+            str | None, Field(description='Date to retrieve backups for, e.g. "2018-02-14".')
+        ] = None,
+        search_by_company_name: Annotated[
+            str | None, Field(description="Filter by company name.")
+        ] = None,
+        search_by_device_name: Annotated[
+            str | None, Field(description="Filter by device name.")
+        ] = None,
+        search_by_job_name: Annotated[str | None, Field(description="Filter by job name.")] = None,
+        statuses: Annotated[
+            list[str] | None, Field(description="Filter by one or more backup statuses.")
+        ] = None,
+        companies: Annotated[
+            list[str] | None, Field(description="Filter by one or more companies.")
+        ] = None,
+        tags: Annotated[list[str] | None, Field(description="Filter by one or more tags.")] = None,
+        extra_params: Annotated[
+            dict[str, object] | None,
+            Field(
+                description=(
+                    "Additional raw query params: SearchByBackupMethod, "
+                    "SearchByTooltip, SearchByTag, DaysWithoutSuccess, HistoryDays, "
+                    "FilterScheduled, searchString, excludeTags, backupMethods, "
+                    "deviceTypes, excludeDeviceTypes, policyIds, "
+                    "excludeBackupMethods, policyTypes."
+                )
+            ),
+        ] = None,
     ) -> str:
-        """Retrieve a paginated list of backups, optionally filtered by date.
-
-        API: GET /backups (Backup Radar API v2)
-
-        Args:
-            page: Page number to fetch (default 1).
-            size: Page size (default 50, max 1000).
-            date: Date to retrieve backups for, e.g. "2018-02-14".
-            search_by_company_name: Filter by company name.
-            search_by_device_name: Filter by device name.
-            search_by_job_name: Filter by job name.
-            statuses: Filter by one or more backup statuses.
-            companies: Filter by one or more companies.
-            tags: Filter by one or more tags.
-            extra_params: Additional raw query params (SearchByBackupMethod,
-                SearchByTooltip, SearchByTag, DaysWithoutSuccess, HistoryDays,
-                FilterScheduled, searchString, excludeTags, backupMethods,
-                deviceTypes, excludeDeviceTypes, policyIds,
-                excludeBackupMethods, policyTypes).
-        """
+        """List backups, optionally filtered by date, company, device, job, status, or tag."""
         client = client_factory()
         if client is None:
             return NO_TOKEN
+        if size is not None:
+            size = min(size, _MAX_SIZE)
         params = {
             "Page": page,
             "Size": size,
@@ -59,37 +70,43 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         }
         try:
             result = await client.get("/backups", params=params)
-            return json.dumps(result, indent=2)
+            return dump_json_capped(result)
         except BackupRadarError as e:
-            return f"Error: {e}"
+            return e.to_envelope()
 
-    @mcp.tool()
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
     async def backupradar_get_scheduled_backups(
-        history_days: int | None = None,
-        size: int | None = None,
-        search_by_company_name: str | None = None,
-        search_by_device_name: str | None = None,
-        search_by_job_name: str | None = None,
-        extra_params: dict[str, object] | None = None,
+        history_days: Annotated[
+            int | None,
+            Field(description="Days of backup history to include (default 0, max 31)."),
+        ] = None,
+        size: Annotated[
+            int | None, Field(description="Page size (default 50, hard-capped at 200).")
+        ] = None,
+        search_by_company_name: Annotated[
+            str | None, Field(description="Filter by company name.")
+        ] = None,
+        search_by_device_name: Annotated[
+            str | None, Field(description="Filter by device name.")
+        ] = None,
+        search_by_job_name: Annotated[str | None, Field(description="Filter by job name.")] = None,
+        extra_params: Annotated[
+            dict[str, object] | None,
+            Field(
+                description=(
+                    "Additional raw query params: Page, DaysWithoutSuccess, date, "
+                    "statuses, companies, tags, backupMethods, deviceTypes, "
+                    "policyIds, policyTypes."
+                )
+            ),
+        ] = None,
     ) -> str:
-        """Retrieve backups filtered to only scheduled backup jobs, with recent history.
-
-        API: GET /backups?FilterScheduled=true (Backup Radar API v2)
-
-        Args:
-            history_days: Number of days of backup history to include
-                (default 0 = no history, max 31).
-            size: Page size (default 50, max 1000).
-            search_by_company_name: Filter by company name.
-            search_by_device_name: Filter by device name.
-            search_by_job_name: Filter by job name.
-            extra_params: Additional raw query params (Page, DaysWithoutSuccess,
-                date, statuses, companies, tags, backupMethods, deviceTypes,
-                policyIds, policyTypes).
-        """
+        """List scheduled backup jobs, with optional recent history."""
         client = client_factory()
         if client is None:
             return NO_TOKEN
+        if size is not None:
+            size = min(size, _MAX_SIZE)
         params = {
             "FilterScheduled": True,
             "HistoryDays": history_days,
@@ -101,35 +118,39 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         }
         try:
             result = await client.get("/backups", params=params)
-            return json.dumps(result, indent=2)
+            return dump_json_capped(result)
         except BackupRadarError as e:
-            return f"Error: {e}"
+            return e.to_envelope()
 
-    @mcp.tool()
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
     async def backupradar_get_inactive_backups(
-        page: int | None = None,
-        size: int | None = None,
-        search_by_company_name: str | None = None,
-        search_by_device_name: str | None = None,
-        search_by_job_name: str | None = None,
-        extra_params: dict[str, object] | None = None,
+        page: Annotated[int | None, Field(description="Page number to fetch (default 1).")] = None,
+        size: Annotated[
+            int | None, Field(description="Page size (default 50, hard-capped at 200).")
+        ] = None,
+        search_by_company_name: Annotated[
+            str | None, Field(description="Filter by company name.")
+        ] = None,
+        search_by_device_name: Annotated[
+            str | None, Field(description="Filter by device name.")
+        ] = None,
+        search_by_job_name: Annotated[str | None, Field(description="Filter by job name.")] = None,
+        extra_params: Annotated[
+            dict[str, object] | None,
+            Field(
+                description=(
+                    "Additional raw query params: SearchByBackupMethod, "
+                    "SearchByEmailFrom, SearchByBackupType."
+                )
+            ),
+        ] = None,
     ) -> str:
-        """Retrieve a paginated list of inactive backups.
-
-        API: GET /backups/inactive (Backup Radar API v2)
-
-        Args:
-            page: Page number to fetch (default 1).
-            size: Page size (default 50, max 1000).
-            search_by_company_name: Filter by company name.
-            search_by_device_name: Filter by device name.
-            search_by_job_name: Filter by job name.
-            extra_params: Additional raw query params (SearchByBackupMethod,
-                SearchByEmailFrom, SearchByBackupType).
-        """
+        """List backups that have gone inactive (stopped reporting)."""
         client = client_factory()
         if client is None:
             return NO_TOKEN
+        if size is not None:
+            size = min(size, _MAX_SIZE)
         params = {
             "Page": page,
             "Size": size,
@@ -140,31 +161,31 @@ def register(mcp: FastMCP, client_factory: Callable[[], BackupRadarClient | None
         }
         try:
             result = await client.get("/backups/inactive", params=params)
-            return json.dumps(result, indent=2)
+            return dump_json_capped(result)
         except BackupRadarError as e:
-            return f"Error: {e}"
+            return e.to_envelope()
 
-    @mcp.tool()
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
     async def backupradar_get_backup_results(
-        backup_id: int,
-        date: str | None = None,
+        backup_id: Annotated[int, Field(description="Required unique identifier of the backup.")],
+        date: Annotated[
+            str | None,
+            Field(
+                description=(
+                    'Date to retrieve results for, e.g. "2018-02-14". Defaults to '
+                    "the vendor API's own default (typically the latest result) if "
+                    "omitted."
+                )
+            ),
+        ] = None,
     ) -> str:
-        """Retrieve backup results for a specific backup, for a given date.
-
-        API: GET /backups/{backupId}/results (Backup Radar API v2)
-
-        Args:
-            backup_id: Required unique identifier of the backup.
-            date: Date to retrieve results for, e.g. "2018-02-14". Defaults
-                to the vendor API's own default (typically the latest result)
-                if omitted.
-        """
+        """Get backup results for one specific backup, for a given date."""
         client = client_factory()
         if client is None:
             return NO_TOKEN
         params = {"date": date}
         try:
             result = await client.get(f"/backups/{backup_id}/results", params=params)
-            return json.dumps(result, indent=2)
+            return dump_json_capped(result)
         except BackupRadarError as e:
-            return f"Error: {e}"
+            return e.to_envelope()
