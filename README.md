@@ -119,14 +119,14 @@ curl http://localhost:8080/health
 
 No credentials are required for the health endpoint.
 
-## 授权参数说明 (Authentication)
+## Authentication Parameters (Authentication)
 
 Every request to `/mcp` must include the following HTTP headers:
 
-| Header | 类型 | 是否必填 | 默认值 | 枚举值 | 字段描述 | Example |
+| Header | Type | Required | Default | Allowed values | Description | Example |
 |---|---|---|---|---|---|---|
-| `X-BackupRadar-Api-Key` | string | 必填 | 无 | 无(自由文本) | Backup Radar 的静态长期 API Key(非 OAuth2),与 vendor 自身 OpenAPI 规范里名为 `ApiKey` 的 header 认证方式一致;对应 MSPbots 现有 Backup Radar 集成配置里的 "API Key" 字段。 | `X-BackupRadar-Api-Key: <api_key>` |
-| `X-BackupRadar-Site` | string | 必填 | 无 | `us`、`eu`(或直接传完整域名 `api.backupradar.com` / `api-eu.backupradar.com`) | 选择调用美国还是欧洲区域的 Backup Radar API,对应 MSPbots 现有 Backup Radar 集成配置里的必填 "Site" 下拉字段。 | `X-BackupRadar-Site: us` |
+| `X-BackupRadar-Api-Key` | string | Yes | None | None (free text) | Backup Radar's static long-lived API Key (not OAuth2), consistent with the header authentication method named `ApiKey` in the vendor's own OpenAPI spec; corresponds to the "API Key" field in the existing MSPbots Backup Radar integration configuration. | `X-BackupRadar-Api-Key: <api_key>` |
+| `X-BackupRadar-Site` | string | Yes | None | `us`, `eu` (or pass the full domain `api.backupradar.com` / `api-eu.backupradar.com` directly) | Selects whether to call the US or the EU region Backup Radar API; corresponds to the required "Site" dropdown field in the existing MSPbots Backup Radar integration configuration. | `X-BackupRadar-Site: us` |
 
 Missing either header returns `401 Unauthorized`.
 
@@ -151,14 +151,14 @@ Connect your MCP client with:
 
 **4 tools** — the subset of MSPbots' 6 configured Backup Radar interfaces that are still supported by the current (v2) Backup Radar API (see scope note above).
 
-| Tool | 功能 | 参数 |
+| Tool | Description | Parameters |
 |---|---|---|
-| `backupradar_get_backups` | 分页查询备份列表,可按日期/公司/设备/任务名过滤 | `page?`, `size?`, `date?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `statuses?`, `companies?`, `tags?`, `extra_params?` |
-| `backupradar_get_scheduled_backups` | 查询已排程的备份任务及近期历史 | `history_days?`, `size?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `extra_params?` |
-| `backupradar_get_inactive_backups` | 分页查询不活跃(inactive)的备份 | `page?`, `size?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `extra_params?` |
-| `backupradar_get_backup_results` | 按 ID 查某个备份在指定日期的执行结果 | `backup_id`(必填), `date?` |
+| `backupradar_get_backups` | Query the backup list with pagination, filterable by date/company/device/job name | `page?`, `size?`, `date?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `statuses?`, `companies?`, `tags?`, `extra_params?` |
+| `backupradar_get_scheduled_backups` | Query scheduled backup jobs and recent history | `history_days?`, `size?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `extra_params?` |
+| `backupradar_get_inactive_backups` | Query inactive backups with pagination | `page?`, `size?`, `search_by_company_name?`, `search_by_device_name?`, `search_by_job_name?`, `extra_params?` |
+| `backupradar_get_backup_results` | Get the execution result of a backup on the specified date by ID | `backup_id`(required), `date?` |
 
-## 测试示例 (Test Example)
+## Test Example (Test Example)
 
 Fetch recent backups:
 
